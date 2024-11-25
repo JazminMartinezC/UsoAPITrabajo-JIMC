@@ -198,9 +198,10 @@ export const routes: Routes = [
 ```
 
 #### Una vez creado los componentes de service, login y user-list se accede a el componente service en el archivo user.service.ts
-en el cual se agregaran los apis con los que se trabajaran en el proyecto 
+#### en el cual se agregaran los apis con los que se trabajaran en el proyecto 
 ![image](https://github.com/user-attachments/assets/23ae80db-a8af-4319-a466-ef69671f5dd7)
-en el caso de este archivo tambien haremos metodos que nos sirvan para validar los usuarios que entran a el programa. 
+
+#### en el caso de este archivo tambien haremos metodos que nos sirvan para validar los usuarios que entran a el programa. 
 por tanto se hacen los siguientes 
 
 ```typescript
@@ -746,4 +747,37 @@ Dentro del codigo tambien se presenta la recuperación del usuario que ingreso p
 ### muestra el siguiente componente 
 
 ![image](https://github.com/user-attachments/assets/32ad0d22-a38d-4496-a502-b16d40e03a57)
+
+
+## Modificaciones en la tabla
+![image](https://github.com/user-attachments/assets/9e611d91-f894-473c-9ef9-0f535f7334f9)
+
+
+### cuando se hacen modificaciones
+
+![image](https://github.com/user-attachments/assets/e90800fe-764b-4636-b331-0780e8b069ff)
+
+### Aplicar el filtro 
+
+![image](https://github.com/user-attachments/assets/c9c874f2-f48e-49cc-b34f-3f8454295e77)
+
+### Información del usuario que esta en sesión 
+
+![image](https://github.com/user-attachments/assets/8c3f35f9-1daf-446e-a617-f508c9c4b615)
+
+### Nueva modificacion a la tabla
+![image](https://github.com/user-attachments/assets/305b7aa4-991b-4d15-9a6d-13485459d955)
+
+### Aplica el filtro 
+![image](https://github.com/user-attachments/assets/a00591f8-20b0-4092-ac56-59da16ece231)
+
+### Eliminar un regitro
+![image](https://github.com/user-attachments/assets/b2ab6b02-a384-494e-abf3-5867931e0271)
+
+
+![image](https://github.com/user-attachments/assets/1b8aa05b-a381-4e6a-a9b7-05ac2fbdb51f)
+
+
+
+
 
