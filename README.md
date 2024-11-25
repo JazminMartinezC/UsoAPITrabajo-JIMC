@@ -10,13 +10,61 @@ Run `ng @angular/material`
 ![image](https://github.com/user-attachments/assets/eacda088-5712-4a3d-8ccc-7ff9d35c4927)
 
 #### Una vez creado los componentes se accede a el componente service en el archivo user.service.ts
-![image](https://github.com/user-attachments/assets/baf5788a-bf43-461f-8e37-d82f9aca6a1d)
+en el cual se agregaran los apis con los que se trabajaran en el proyecto 
+![image](https://github.com/user-attachments/assets/23ae80db-a8af-4319-a466-ef69671f5dd7)
+en el caso de este archivo tambien haremos metodos que nos sirvan para validar los usuarios que entran a el programa. 
+por tanto se hacen los siguientes 
 
+```typescript
+ getUsers(): Observable<any[]> {
+    return this.http.get<any[]>(this.apiUrl);
+  }
+
+  getUserById(userId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/${userId}`);
+  }
+
+  authenticateUser(email: string, password: string): Observable<any> {
+    return this.http.get<any[]>(this.apiUrl).pipe(
+      map((users: any[]) =>
+        users.find(user => user.email === email && user.password === password)
+      )
+    );
+  }
+
+  setLoggedInUser(user: any): void {
+    if (this.isBrowser()) {
+      localStorage.setItem('loggedInUser', JSON.stringify(user)); // Guardar en localStorage
+    }
+  }
+
+  getLoggedInUser(): any {
+    if (this.isBrowser()) {
+      const user = localStorage.getItem('loggedInUser');
+      return user ? JSON.parse(user) : null; // Recuperar desde localStorage
+    }
+    return null; // Si no está en el navegador, retorna null
+  }
+
+  clearLoggedInUser(): void {
+    if (this.isBrowser()) {
+      localStorage.removeItem('loggedInUser'); // Eliminar del almacenamiento
+    }
+  }
+
+  // Obtener noticias
+  getNews(): Observable<any> {
+    const headers = new HttpHeaders().set('X-Api-Key', this.apiKey);
+    return this.http.get<any>(this.newsApiUrl, { headers });
+  }
+```
 #### En el componente de user-list.component.ts
 
 #### UserListComponent
 
-Este componente de Angular muestra una tabla con una lista de usuarios. Utiliza Angular Material para proporcionar funcionalidad de paginación, ordenamiento y filtrado.
+Este componente de Angular muestra una tabla con una lista de Noticias que estan en la API de noticias. Este componente utiliza Angular Material para proporcionar funcionalidad de paginación, ordenamiento y filtrado.
+
+En este mismo archivo se inncorpora el uso de SweetAlert2 el cual es un componente para mostrar ventanas modales las cuales tienen un cierto diseño definido en su pagina 
 
 #### Código del Componente
 
@@ -28,34 +76,171 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { UserService } from '../../services/user.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-
+import { DateAdapter } from '@angular/material/core';
+import { MatMenuModule } from '@angular/material/menu';
+import { NgIf } from '@angular/common';
+import Swal from 'sweetalert2';
+import { Router } from '@angular/router';
 @Component({
   selector: 'app-user-list',
   standalone: true,
   imports: [
     MatPaginator,MatSort,
     MatTableModule,MatFormFieldModule,
-    MatInputModule
+    MatInputModule,MatMenuModule,NgIf
   ],
   templateUrl: './user-list.component.html',
   styleUrls: ['./user-list.component.css']
 })
 export class UserListComponent implements OnInit, AfterViewInit {
-  displayedColumns: string[] = ['id', 'name', 'email', 'role'];
-  dataSource = new MatTableDataSource<any>([]); // Inicializa con un arreglo vacío
+  displayedColumns: string[] = [];
+  loggedInUser: any;
+  dataSource = new MatTableDataSource<any>([]);
+  activeData: 'users' | 'news' = 'news';
 
   readonly paginator = viewChild.required(MatPaginator);
   readonly sort = viewChild.required(MatSort);
 
-  constructor(private userService: UserService) {}
+
+  constructor(private userService: UserService, private router: Router) {} // Inyecta Router
 
   ngOnInit(): void {
-    // Llama al servicio para obtener los usuarios y asignarlos al dataSource
-    this.userService.getUsers().subscribe((data: any[]) => {
-      this.dataSource.data = data; // Asigna los datos obtenidos a dataSource
+    this.loggedInUser = this.userService.getLoggedInUser(); // Recupera el usuario desde localStorage
+    if (!this.loggedInUser) {
+      this.router.navigate(['/login']); // Redirige al login si no hay usuario logueado
+    } else {
+      this.loadData(); // Carga los datos si hay un usuario logueado
+    }
+  }
+  
+  loadData(): void {
+    if (this.activeData === 'users') {
+      this.userService.getUsers().subscribe((data) => {
+        this.dataSource.data = data;
+        this.displayedColumns = ['id', 'name', 'email', 'role'];
+      });
+    } else {
+      this.userService.getNews().subscribe((data) => {
+        // Añadir un ID autoincrementable a cada noticia
+        const articlesWithId = data.articles.map((article: any, index: number) => ({
+          id: index + 1, // Generar un ID autoincrementable
+          ...article, // Mantener los datos originales
+        }));
+        this.dataSource.data = articlesWithId;
+        this.displayedColumns = ['id', 'author', 'title', 'imagen', 'info', 'edit', 'delete'];
+       });
+    }
+  }
+  
+  // Método para manejar acciones de botones
+  handleAction(action: string, row: any): void {
+    switch (action) {
+      case 'info':
+        this.showInfoModal(row);
+        break;
+      case 'edit':
+        this.showEditModal(row);
+        break;
+      case 'delete':
+        this.showDeleteModal(row);
+        break;
+      default:
+        break;
+    }
+  }
+  showInfoModal(row: any): void {
+
+    Swal.fire({
+      title: 'Más información de la noticia',
+      imageUrl:row.urlToImage,
+      imageHeight:180,
+      imageWidth:250,
+      html: `<strong>Autor:</strong> ${row.author || 'N/A'}<br>
+             <strong>Título:</strong> ${row.title}<br>
+             <strong>Descripción:</strong> ${row.description || 'Sin descripción'}`,
+
+      confirmButtonText: 'Cerrar'
     });
   }
 
+  showInfoUser(): void {
+    if (!this.loggedInUser) {
+      Swal.fire({
+        title: 'Error',
+        text: 'No se encontraron datos del usuario logueado.',
+        icon: 'error',
+        confirmButtonText: 'Cerrar'
+      });
+      return;
+    }
+  
+    Swal.fire({
+      title: 'Información del Usuario',
+      imageUrl: this.loggedInUser.avatar || '', // Si tienes un avatar asociado al usuario
+      imageHeight: 100,
+      imageWidth: 100,
+      html: `
+        <strong>Nombre:</strong> ${this.loggedInUser.name || 'N/A'}<br>
+        <strong>Rol:</strong> ${this.loggedInUser.role || 'Sin rol'}<br>
+        <strong>Correo:</strong> ${this.loggedInUser.email || 'Sin correo'}`,
+    
+      confirmButtonText: 'Cerrar'
+    });
+  }
+  
+
+  showEditModal(row: any): void {
+    Swal.fire({
+      title: 'Editar Noticia',
+      html: `<label for="edit-title">Título</label><br>
+             <input id="edit-title" class="swal2-input" value="${row.title}"><br>
+             <label for="edit-author">Autor</label><br>
+             <input id="edit-author" class="swal2-input" value="${row.author}">`,
+      showCancelButton: true,
+      confirmButtonText: 'Guardar',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const title = (document.getElementById('edit-title') as HTMLInputElement).value;
+        const author = (document.getElementById('edit-author') as HTMLInputElement).value;
+        if (!title || !author) {
+          Swal.showValidationMessage('Ambos campos son obligatorios');
+        }
+        return { title, author };
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Actualizar solo en la tabla, no en la API
+        row.title = result.value?.title;
+        row.author = result.value?.author;
+        this.dataSource.data = [...this.dataSource.data];
+        Swal.fire('Guardado', 'Los cambios han sido aplicados.', 'success');
+      }
+    });
+  }
+
+  showDeleteModal(row: any): void {
+    Swal.fire({
+      title: '¿Estás seguro?',
+      text: 'Esto eliminará la fila seleccionada.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Eliminar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Eliminar solo de la tabla
+        this.dataSource.data = this.dataSource.data.filter((item) => item !== row);
+        Swal.fire('Eliminado', 'La fila ha sido eliminada.', 'success');
+      }
+    });
+  }
+
+  
+  switchData(type: 'users' | 'news'): void {
+    this.activeData = type;
+    this.loadData();
+  }
+  
   ngAfterViewInit() {
     this.dataSource.paginator = this.paginator();
     this.dataSource.sort = this.sort();
@@ -69,83 +254,190 @@ export class UserListComponent implements OnInit, AfterViewInit {
       this.dataSource.paginator.firstPage();
     }
   }
+
+  logout(): void {
+    this.userService.clearLoggedInUser(); // Elimina al usuario del almacenamiento
+    this.router.navigate(['/login']); // Redirige al login
+  }
+  
 }
 
 ```
 
 #### En el componente de user-list en el archivo usere-list.component.html
 
-# Tabla de Usuarios
+# Tabla de Noticias
 
-Este código HTML muestra una tabla interactiva de usuarios con funcionalidades como filtrado, ordenamiento y paginación, utilizando Angular Material.
 
-## Código del Componente HTML y CSS
+Este código HTML muestra una tabla interactiva de noticias que se recuperan de la API con funcionalidades de editar, borrar, eliminar y para la tabala de aplica el filtrado y paginación, utilizando Angular Material.
+Dentro del codigo tambien se presenta la recuperación del usuario que ingreso por el login. 
+
+## Código del Componente HTML 
 
 ### HTML
 
 ```html
-<div class="container">
-  <!-- Título de la página -->
-  <h1 class="title">Tabla de Usuarios</h1>
+   <body >
+    
+      <!-- Barra de menú principal -->
+      <nav class="navbar">
+              <div class="user-info">
 
-  <!-- Filtro -->
-  <mat-form-field class="mat-form-field">
-    <mat-label>Filtrar</mat-label>
-    <input matInput (keyup)="applyFilter($event)" placeholder="juan" #input />
-  </mat-form-field>
+                <strong><h1>Sección de Noticias 
+                    <span class="user-info"> Hola   {{ loggedInUser?.name }} , te presentamos las noticias día.</span> 
+                </h1></strong>
+          <!-- <span class="user-info">{{ loggedInUser?.name }}</span>
+         <img *ngIf="loggedInUser?.avatar" [src]="loggedInUser.avatar" alt="Avatar" class="user-avatar" />
+              --></div>
+      
+       
+                 <!-- Barra de menú interactiva -->
+        <div class="menu-bar">
+          <button mat-button [matMenuTriggerFor]="menu1" class="color">
+             <span class="welcome-containeruser">{{ loggedInUser?.name }}</span>
+            <br>
+            <img *ngIf="loggedInUser?.avatar" [src]="loggedInUser.avatar" alt="Avatar" class="user-avatar" />
+  </button>
+          <mat-menu  #menu1="matMenu" yPosition="above">
+            <button mat-menu-item class="mat-menui" (click)="showInfoUser()">Mi información</button>
 
-  <!-- Tabla de usuarios -->
-  <div class="mat-elevation-z8 table-container">
-    <table mat-table [dataSource]="dataSource" matSort>
-      <!-- ID Column -->
-      <ng-container matColumnDef="id">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header> ID </th>
-        <td mat-cell *matCellDef="let row">{{ row.id }}</td>
-      </ng-container>
+            <button mat-menu-item class="mat-menui" (click)="logout()">  Cerrar sesion  </button>
+          </mat-menu>
 
-      <!-- Name Column -->
-      <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header> Nombre </th>
-        <td mat-cell *matCellDef="let row">{{ row.name }}</td>
-      </ng-container>
+        </div>     
+      </nav>
+    
+      <div class="main-container ">
+        <!-- Pantalla de bienvenida -->
+      <!----> <div class="welcome-container">
+          <h1>Noticias de Estados Unidos de América</h1>
+        </div>
+      
+        <!-- Botones para cambiar de datos -->
+        <div class="button-container">
+          <!--<button mat-raised-button color="primary" (click)="switchData('users')">Ver Usuarios</button>-->
+        <!-- <button mat-raised-button color="accent" (click)="switchData('news')">Ver Noticias</button>-->
+        </div>
+      
+        <!-- Filtro -->
+        <mat-form-field class="mat-form-field">
+          <mat-label>Filtrar</mat-label>
+          <input matInput (keyup)="applyFilter($event)" placeholder="Filtrar resultados" />
+        </mat-form-field>
+      
+        <!-- Tabla dinámica -->
+        <div class="mat-elevation-z8 table-container ">
+          <table mat-table [dataSource]="dataSource" matSort>
+            <!-- Columna ID -->
+            <ng-container matColumnDef="id" *ngIf="activeData === 'users'">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header> ID </th>
+              <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+            </ng-container>
+      
+            <!-- Columna Nombre -->
+            <ng-container matColumnDef="name" *ngIf="activeData === 'users'">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header> Nombre </th>
+              <td mat-cell *matCellDef="let row">{{ row.name }}</td>
+            </ng-container>
+      
+            <!-- Columna Email -->
+            <ng-container matColumnDef="email" *ngIf="activeData === 'users'">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header> Email </th>
+              <td mat-cell *matCellDef="let row">{{ row.email }}</td>
+            </ng-container>
+      
+            <!-- Columna Rol -->
+            <ng-container matColumnDef="role" *ngIf="activeData === 'users'">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header> Rol </th>
+              <td mat-cell *matCellDef="let row">{{ row.role }}</td>
+            </ng-container>
+      
+            <!-- Columna Fuente -->
+             
+            <!-- Columna ID-->
 
-      <!-- Email Column -->
-      <ng-container matColumnDef="email">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header> Email </th>
-        <td mat-cell *matCellDef="let row">{{ row.email }}</td>
-      </ng-container>
 
-      <!-- Role Column -->
-      <ng-container matColumnDef="role">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header> Rol </th>
-        <td mat-cell *matCellDef="let row">{{ row.role }}</td>
-      </ng-container>
+          
+            <!-- Columna Autor -->
+           <!-- Columna Autor -->
+           <ng-container matColumnDef="id" *ngIf="activeData === 'news'">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> ID </th>
+            <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+          </ng-container>
 
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
 
-      <!-- Row shown when there is no matching data -->
-      <tr class="mat-row" *matNoDataRow>
-        <td class="mat-cell" colspan="4">No se encuentra en los "{{ input.value }}"</td>
-      </tr>
-    </table>
-  </div>
+<ng-container matColumnDef="author" *ngIf="activeData === 'news'">
+  <th mat-header-cell *matHeaderCellDef mat-sort-header> Autor </th>
+  <td mat-cell *matCellDef="let row">{{ row.author || 'N/A' }}</td>
+</ng-container>
 
-  <!-- Paginador -->
-  <mat-paginator [pageSizeOptions]="[5, 10, 25, 100]" aria-label="componente"></mat-paginator>
-</div>
+<!-- Columna Título -->
+<ng-container matColumnDef="title" *ngIf="activeData === 'news'">
+  <th mat-header-cell *matHeaderCellDef mat-sort-header> Título </th>
+  <td mat-cell *matCellDef="let row">{{ row.title }}</td>
+</ng-container>
+
+<!-- Columna Imagen -->
+<ng-container matColumnDef="imagen" *ngIf="activeData === 'news'">
+  <th mat-header-cell *matHeaderCellDef> Imagen </th>
+  <td mat-cell *matCellDef="let row">
+    <img *ngIf="row.urlToImage" [src]="row.urlToImage" width="90" />
+    <span *ngIf="!row.urlToImage">Imagen NO Disponible</span>
+  </td>
+</ng-container>
+
+<!-- Columna Información -->
+<ng-container matColumnDef="info" *ngIf="activeData === 'news'">
+  <th mat-header-cell *matHeaderCellDef> Información </th>
+  <td mat-cell *matCellDef="let row">
+    <img src="info.png" alt="Información" width="50" (click)="handleAction('info', row)" style="cursor: pointer;" />
+  </td>
+</ng-container>
+
+<!-- Columna Editar -->
+<ng-container matColumnDef="edit" *ngIf="activeData === 'news'">
+  <th mat-header-cell *matHeaderCellDef> Editar </th>
+  <td mat-cell *matCellDef="let row">
+    <img src="editar.png" alt="Editar" width="30" (click)="handleAction('edit', row)" style="cursor: pointer;" />
+  </td>
+</ng-container>
+
+<!-- Columna Borrar -->
+<ng-container matColumnDef="delete" *ngIf="activeData === 'news'">
+  <th mat-header-cell *matHeaderCellDef> Borrar </th>
+  <td mat-cell *matCellDef="let row">
+    <img src="borrar.png" alt="Borrar" width="30" (click)="handleAction('delete', row)" style="cursor: pointer;" />
+  </td>
+</ng-container>
+
+
+
+      
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell" [attr.colspan]="displayedColumns.length">No se encontraron resultados</td>
+            </tr>
+          </table>
+        </div>
+      
+    
+        <mat-paginator [pageSizeOptions]="[5, 10, 25, 100]" aria-label="componente"></mat-paginator>
+        <br>
+<!--
+        <a class="welcome-button" (click)="logout()">Regresar a Login</a>
+      -->
+      </div>
+      
+    </body>
 ```
+![image](https://github.com/user-attachments/assets/9fff32f5-a65a-4a85-aead-b6e5e67be73b)
+
 
 #### En el componente de app.component.ts se coloca el codigo de 
-![image](https://github.com/user-attachments/assets/2749157b-094c-4c23-90d2-472bc8b77610)
 
+![image](https://github.com/user-attachments/assets/73327243-ec02-4df2-896f-dc0c1ce61a4c)
 
-
-## Pantalla final 
-![image](https://github.com/user-attachments/assets/877c7a5e-23c7-4f21-b707-abe1a97c2999)
-#### ° Se puede determinar la cantidad de usuarios que se mostraran en la tabla.
-#### ° Paginación de la tabla.
-#### ° Filtrado de un dato de la tabla.
 
 # Para la validación de usuarios en el login en base a lo que existe en la API.
 
@@ -193,33 +485,28 @@ export class LoginComponent {
   constructor(private router: Router, private userService: UserService, private snackBar: MatSnackBar) {}
 
   iniciarPagina() {
-    // Validación de los campos de correo y contraseña
     if (this.email && this.password) {
-      // Llamada al servicio para obtener los usuarios
       this.userService.getUsers().subscribe(
         (users) => {
-          // Buscar el usuario que coincida con el correo y la contraseña
           const user = users.find(u => u.email === this.email && u.password === this.password);
-          
           if (user) {
-            // Si el usuario es válido, navegar al dashboard
-            this.router.navigate(['/user-list']);
+            this.userService.setLoggedInUser(user); // Guarda al usuario logueado en localStorage
+            this.router.navigate(['/user-list']); // Redirige a la lista de usuarios
           } else {
-            // Si no se encuentra un usuario que coincida, mostrar mensaje de error
             this.snackBar.open('Credenciales incorrectas', 'Cerrar', { duration: 3000 });
           }
         },
         (error) => {
-          // Manejo de error en caso de que falle la llamada a la API
           console.error('Error al obtener los usuarios', error);
           this.snackBar.open('Error al obtener los usuarios', 'Cerrar', { duration: 3000 });
         }
       );
     } else {
-      // Si no se completan los campos
       this.snackBar.open('Por favor complete los campos', 'Cerrar', { duration: 3000 });
     }
   }
+  
+
 }
 ```
  #### En el componente de login.component.html se realizo todo la estructura para poder ingresar los datos necesarios para validar los cuales son correo y contraseña.
@@ -237,6 +524,7 @@ export class LoginComponent {
             padding: 20px;
             box-sizing: border-box;
           }
+
           .btn {
             margin-top: 20px;
             padding: 12px 24px;
@@ -284,7 +572,7 @@ export class LoginComponent {
                 <mat-icon matSuffix>vpn_key</mat-icon>
               </mat-form-field>
               <br>
-              <button class="btn" (click)="iniciarPagina()">Login</button>
+              <button class="btn" (click)="iniciarPagina()">Iniciar Sesion</button>
             </mat-tab>
 
             <mat-tab label="Register">
@@ -313,6 +601,10 @@ export class LoginComponent {
       </mat-card>
     </div>
 ```
+
+![image](https://github.com/user-attachments/assets/f7473c97-15fd-40e7-94be-b49e0135f016)
+
+
 #### En el el archivo de app.routes.ts se realiza la codificación para poder navegar entre los componentes. Por tanto se crean las rutas que se mostraran durante el uso.
 ```typescript
 import { Routes } from '@angular/router';
@@ -334,8 +626,12 @@ export const routes: Routes = [
 
 ### Resultado de la ejecución 
 #### Login
-![image](https://github.com/user-attachments/assets/74b65dd3-f439-492d-a15b-33af9ff82f26)
+
+![image](https://github.com/user-attachments/assets/f9c9cb26-85ca-4e58-9962-5bddd94af1bc)
+
 
 
 ### muestra el siguiente componente 
-![image](https://github.com/user-attachments/assets/1e0ab87c-b59b-45c7-bb93-a41202875cb4)
+
+![image](https://github.com/user-attachments/assets/32ad0d22-a38d-4496-a502-b16d40e03a57)
+
