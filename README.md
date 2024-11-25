@@ -1,15 +1,203 @@
-# Estos son los pasos que se siguen hasta el momento de mostrar elementos en la tabla
+# USO DE API DE NOTICIAS
+
 ## Reporte de practica 
 #### Como primer paso lo que hacemos es crear el proyecto en la terminal mediante el comando de:
 Run `ng new nombreProyecto`
 #### luego de eso agregamos los componentes materials de angular por tanto se usa el comando de:
 Run `ng @angular/material`
-#### En este caso creare 2 componentes el cual el primero es el el componente 
+#### En este caso creare 3 componentes el cual el primero es el el componente 
 ##### ° component/user-list
 ##### ° service
-![image](https://github.com/user-attachments/assets/eacda088-5712-4a3d-8ccc-7ff9d35c4927)
+##### ° login
 
-#### Una vez creado los componentes se accede a el componente service en el archivo user.service.ts
+![image](https://github.com/user-attachments/assets/599f2dcb-331a-4d15-b4bc-43082262aefd)
+
+# Para la validación de usuarios en el login se hará en base a lo que existe en la API de usuarios.
+
+#### se crea un nuevo componente el cual tiene el nombre de login
+Run `ng generate component login`
+
+#### Una vez creado lo que se hace es que en el archivo de login.component. ts se le agrega el codigo para poder validar los datos que se piden en los fild de correo y contraseña  para acceder al siguiente componente 
+``` typescript
+import { Component } from '@angular/core';
+import { Router } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { FormsModule } from '@angular/forms';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { CommonModule } from '@angular/common'; 
+import { UserService } from '../services/user.service';          // Importar el servicio
+import { MatSnackBar } from '@angular/material/snack-bar';
+import {MatStepperModule} from '@angular/material/stepper';
+@Component({
+  selector: 'app-login',
+  standalone: true,
+  imports: [
+    CommonModule,      
+    MatCardModule,
+    MatTabsModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    FormsModule,
+    MatSnackBarModule, MatStepperModule
+  ],
+  templateUrl: './login.component.html',
+  styleUrls: ['./login.component.css']
+})
+export class LoginComponent {
+  email: string = '';
+  password: string = '';
+  remail: string = '';
+  rpassword: string = '';
+  rconfirmPassword: string = '';
+
+  constructor(private router: Router, private userService: UserService, private snackBar: MatSnackBar) {}
+
+  iniciarPagina() {
+    if (this.email && this.password) {
+      this.userService.getUsers().subscribe(
+        (users) => {
+          const user = users.find(u => u.email === this.email && u.password === this.password);
+          if (user) {
+            this.userService.setLoggedInUser(user); // Guarda al usuario logueado en localStorage
+            this.router.navigate(['/user-list']); // Redirige a la lista de usuarios
+          } else {
+            this.snackBar.open('Credenciales incorrectas', 'Cerrar', { duration: 3000 });
+          }
+        },
+        (error) => {
+          console.error('Error al obtener los usuarios', error);
+          this.snackBar.open('Error al obtener los usuarios', 'Cerrar', { duration: 3000 });
+        }
+      );
+    } else {
+      this.snackBar.open('Por favor complete los campos', 'Cerrar', { duration: 3000 });
+    }
+  }
+  
+
+}
+```
+ #### En el componente de login.component.html se realizo todo la estructura para poder ingresar los datos necesarios para validar los cuales son correo y contraseña.
+ ```html
+<style>
+    div{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-size: cover;
+            background-color: rgb(255, 222, 112);
+            background-image: url("fondo.jpg");
+            background-position: center;
+            padding: 20px;
+            box-sizing: border-box;
+          }
+
+          .btn {
+            margin-top: 20px;
+            padding: 12px 24px;
+            font-size: 18px;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            align-items: center;
+          }
+
+          mat-card-title
+          {
+            align-items: center;
+            align-content: center;
+          }
+
+          mat-form-field
+          {
+            color: black;
+            background-color: rgb(255, 255, 255);
+        }
+          </style>
+<div >
+    
+      <mat-card class="example-card">
+        <mat-card-header>
+          <mat-card-title>Iniciar sesion - Registro </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-tab-group dynamicHeight>
+            
+            <mat-tab label="Iniciar Sesión">
+              <mat-form-field class="example-full-width">
+                <mat-label>Correo</mat-label>
+                <input type="email" matInput placeholder="Email" [(ngModel)]="email" required>
+                <mat-icon matSuffix>email</mat-icon>
+              </mat-form-field>
+              <br>
+              <mat-form-field>
+                <mat-label>Contraseña</mat-label>
+                <input type="password" matInput placeholder="Password" [(ngModel)]="password" required>
+                <mat-icon matSuffix>vpn_key</mat-icon>
+              </mat-form-field>
+              <br>
+              <button class="btn" (click)="iniciarPagina()">Iniciar Sesion</button>
+            </mat-tab>
+
+            <mat-tab label="Register">
+              <mat-form-field class="example-full-width">
+                <mat-label>Correo</mat-label>
+                <input type="email" matInput placeholder="Email" [(ngModel)]="remail" required>
+                <mat-icon matSuffix>email</mat-icon>
+              </mat-form-field>
+              <br>
+              <mat-form-field class="example-full-width">
+                <mat-label>Contraseña</mat-label>
+                <input type="password" matInput placeholder="Password" [(ngModel)]="rpassword" required>
+                <mat-icon matSuffix>vpn_key</mat-icon>
+              </mat-form-field>
+              <br>
+              <mat-form-field class="example-full-width">
+                <mat-label>Confirmar contraseña</mat-label>
+                <input type="password" matInput placeholder="Confirm Password" [(ngModel)]="rconfirmPassword" required>
+                <mat-icon matSuffix>vpn_key</mat-icon>
+              </mat-form-field>
+              <br>
+              <button class="btn" (click)="iniciarPagina()">Register</button>
+            </mat-tab>
+          </mat-tab-group>
+        </mat-card-content>
+      </mat-card>
+    </div>
+```
+
+![image](https://github.com/user-attachments/assets/f7473c97-15fd-40e7-94be-b49e0135f016)
+
+
+#### En el el archivo de app.routes.ts se realiza la codificación para poder navegar entre los componentes. Por tanto se crean las rutas que se mostraran durante el uso.
+```typescript
+import { Routes } from '@angular/router';
+import { LoginComponent } from './login/login.component';
+import { UserListComponent } from './components/user-list/user-list.component';
+export const routes: Routes = [
+    {
+        path: '', redirectTo: '/login',pathMatch:'full'
+    },
+    {
+        path: 'login', component:LoginComponent
+    },
+    {
+        path: 'user-list', component:UserListComponent
+    },
+];
+
+```
+
+#### Una vez creado los componentes de service, login y user-list se accede a el componente service en el archivo user.service.ts
 en el cual se agregaran los apis con los que se trabajaran en el proyecto 
 ![image](https://github.com/user-attachments/assets/23ae80db-a8af-4319-a466-ef69671f5dd7)
 en el caso de este archivo tambien haremos metodos que nos sirvan para validar los usuarios que entran a el programa. 
@@ -58,6 +246,9 @@ por tanto se hacen los siguientes
     return this.http.get<any>(this.newsApiUrl, { headers });
   }
 ```
+
+
+
 #### En el componente de user-list.component.ts
 
 #### UserListComponent
@@ -264,9 +455,114 @@ export class UserListComponent implements OnInit, AfterViewInit {
 
 ```
 
-#### En el componente de user-list en el archivo usere-list.component.html
+#### para el caso del uso de sweetalert2 se creo para las opciones de editar, ver información y borrar, por tanto se creo una sección de codigo para que funcione como un switch, el cual se manda a llamar cuando el usuario hace uso de este 
+```typescript
+ handleAction(action: string, row: any): void {
+    switch (action) {
+      case 'info':
+        this.showInfoModal(row);
+        break;
+      case 'edit':
+        this.showEditModal(row);
+        break;
+      case 'delete':
+        this.showDeleteModal(row);
+        break;
+      default:
+        break;
+    }
+  }
+  showInfoModal(row: any): void {
 
-# Tabla de Noticias
+    Swal.fire({
+      title: 'Más información de la noticia',
+      imageUrl:row.urlToImage,
+      imageHeight:180,
+      imageWidth:250,
+      html: `<strong>Autor:</strong> ${row.author || 'N/A'}<br>
+             <strong>Título:</strong> ${row.title}<br>
+             <strong>Descripción:</strong> ${row.description || 'Sin descripción'}`,
+
+      confirmButtonText: 'Cerrar'
+    });
+  }
+
+  showInfoUser(): void {
+    if (!this.loggedInUser) {
+      Swal.fire({
+        title: 'Error',
+        text: 'No se encontraron datos del usuario logueado.',
+        icon: 'error',
+        confirmButtonText: 'Cerrar'
+      });
+      return;
+    }
+  
+    Swal.fire({
+      title: 'Información del Usuario',
+      imageUrl: this.loggedInUser.avatar || '', // Si tienes un avatar asociado al usuario
+      imageHeight: 100,
+      imageWidth: 100,
+      html: `
+        <strong>Nombre:</strong> ${this.loggedInUser.name || 'N/A'}<br>
+        <strong>Rol:</strong> ${this.loggedInUser.role || 'Sin rol'}<br>
+        <strong>Correo:</strong> ${this.loggedInUser.email || 'Sin correo'}`,
+    
+      confirmButtonText: 'Cerrar'
+    });
+  }
+  
+
+  showEditModal(row: any): void {
+    Swal.fire({
+      title: 'Editar Noticia',
+      html: `<label for="edit-title">Título</label><br>
+             <input id="edit-title" class="swal2-input" value="${row.title}"><br>
+             <label for="edit-author">Autor</label><br>
+             <input id="edit-author" class="swal2-input" value="${row.author}">`,
+      showCancelButton: true,
+      confirmButtonText: 'Guardar',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const title = (document.getElementById('edit-title') as HTMLInputElement).value;
+        const author = (document.getElementById('edit-author') as HTMLInputElement).value;
+        if (!title || !author) {
+          Swal.showValidationMessage('Ambos campos son obligatorios');
+        }
+        return { title, author };
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Actualizar solo en la tabla, no en la API
+        row.title = result.value?.title;
+        row.author = result.value?.author;
+        this.dataSource.data = [...this.dataSource.data];
+        Swal.fire('Guardado', 'Los cambios han sido aplicados.', 'success');
+      }
+    });
+  }
+
+  showDeleteModal(row: any): void {
+    Swal.fire({
+      title: '¿Estás seguro?',
+      text: 'Esto eliminará la fila seleccionada.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Eliminar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Eliminar solo de la tabla
+        this.dataSource.data = this.dataSource.data.filter((item) => item !== row);
+        Swal.fire('Eliminado', 'La fila ha sido eliminada.', 'success');
+      }
+    });
+  }
+```
+
+## En el componente de user-list en el archivo usere-list.component.html
+
+### Tabla de Noticias
 
 
 Este código HTML muestra una tabla interactiva de noticias que se recuperan de la API con funcionalidades de editar, borrar, eliminar y para la tabala de aplica el filtrado y paginación, utilizando Angular Material.
@@ -439,190 +735,6 @@ Dentro del codigo tambien se presenta la recuperación del usuario que ingreso p
 ![image](https://github.com/user-attachments/assets/73327243-ec02-4df2-896f-dc0c1ce61a4c)
 
 
-# Para la validación de usuarios en el login en base a lo que existe en la API.
-
-#### se crea un nuevo componente el cual tiene el nombre de login
-Run `ng generate component login`
-
-#### Una vez creado lo que se hace es que en el archivo de login.component. ts se le agrega el codigo para poder validar los datos que se piden en los fild de correo y contraseña  para acceder al siguiente componente 
-``` typescript
-import { Component } from '@angular/core';
-import { Router } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { FormsModule } from '@angular/forms';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
-import { CommonModule } from '@angular/common'; 
-import { UserService } from '../services/user.service';          // Importar el servicio
-import { MatSnackBar } from '@angular/material/snack-bar';
-import {MatStepperModule} from '@angular/material/stepper';
-@Component({
-  selector: 'app-login',
-  standalone: true,
-  imports: [
-    CommonModule,      
-    MatCardModule,
-    MatTabsModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    FormsModule,
-    MatSnackBarModule, MatStepperModule
-  ],
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css']
-})
-export class LoginComponent {
-  email: string = '';
-  password: string = '';
-  remail: string = '';
-  rpassword: string = '';
-  rconfirmPassword: string = '';
-
-  constructor(private router: Router, private userService: UserService, private snackBar: MatSnackBar) {}
-
-  iniciarPagina() {
-    if (this.email && this.password) {
-      this.userService.getUsers().subscribe(
-        (users) => {
-          const user = users.find(u => u.email === this.email && u.password === this.password);
-          if (user) {
-            this.userService.setLoggedInUser(user); // Guarda al usuario logueado en localStorage
-            this.router.navigate(['/user-list']); // Redirige a la lista de usuarios
-          } else {
-            this.snackBar.open('Credenciales incorrectas', 'Cerrar', { duration: 3000 });
-          }
-        },
-        (error) => {
-          console.error('Error al obtener los usuarios', error);
-          this.snackBar.open('Error al obtener los usuarios', 'Cerrar', { duration: 3000 });
-        }
-      );
-    } else {
-      this.snackBar.open('Por favor complete los campos', 'Cerrar', { duration: 3000 });
-    }
-  }
-  
-
-}
-```
- #### En el componente de login.component.html se realizo todo la estructura para poder ingresar los datos necesarios para validar los cuales son correo y contraseña.
- ```html
-<style>
-    div{
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-size: cover;
-            background-color: rgb(255, 222, 112);
-            background-image: url("fondo.jpg");
-            background-position: center;
-            padding: 20px;
-            box-sizing: border-box;
-          }
-
-          .btn {
-            margin-top: 20px;
-            padding: 12px 24px;
-            font-size: 18px;
-            color: white;
-            background-color: #007bff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            align-items: center;
-          }
-
-          mat-card-title
-          {
-            align-items: center;
-            align-content: center;
-          }
-
-          mat-form-field
-          {
-            color: black;
-            background-color: rgb(255, 255, 255);
-        }
-          </style>
-<div >
-    
-      <mat-card class="example-card">
-        <mat-card-header>
-          <mat-card-title>Iniciar sesion - Registro </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <mat-tab-group dynamicHeight>
-            
-            <mat-tab label="Iniciar Sesión">
-              <mat-form-field class="example-full-width">
-                <mat-label>Correo</mat-label>
-                <input type="email" matInput placeholder="Email" [(ngModel)]="email" required>
-                <mat-icon matSuffix>email</mat-icon>
-              </mat-form-field>
-              <br>
-              <mat-form-field>
-                <mat-label>Contraseña</mat-label>
-                <input type="password" matInput placeholder="Password" [(ngModel)]="password" required>
-                <mat-icon matSuffix>vpn_key</mat-icon>
-              </mat-form-field>
-              <br>
-              <button class="btn" (click)="iniciarPagina()">Iniciar Sesion</button>
-            </mat-tab>
-
-            <mat-tab label="Register">
-              <mat-form-field class="example-full-width">
-                <mat-label>Correo</mat-label>
-                <input type="email" matInput placeholder="Email" [(ngModel)]="remail" required>
-                <mat-icon matSuffix>email</mat-icon>
-              </mat-form-field>
-              <br>
-              <mat-form-field class="example-full-width">
-                <mat-label>Contraseña</mat-label>
-                <input type="password" matInput placeholder="Password" [(ngModel)]="rpassword" required>
-                <mat-icon matSuffix>vpn_key</mat-icon>
-              </mat-form-field>
-              <br>
-              <mat-form-field class="example-full-width">
-                <mat-label>Confirmar contraseña</mat-label>
-                <input type="password" matInput placeholder="Confirm Password" [(ngModel)]="rconfirmPassword" required>
-                <mat-icon matSuffix>vpn_key</mat-icon>
-              </mat-form-field>
-              <br>
-              <button class="btn" (click)="iniciarPagina()">Register</button>
-            </mat-tab>
-          </mat-tab-group>
-        </mat-card-content>
-      </mat-card>
-    </div>
-```
-
-![image](https://github.com/user-attachments/assets/f7473c97-15fd-40e7-94be-b49e0135f016)
-
-
-#### En el el archivo de app.routes.ts se realiza la codificación para poder navegar entre los componentes. Por tanto se crean las rutas que se mostraran durante el uso.
-```typescript
-import { Routes } from '@angular/router';
-import { LoginComponent } from './login/login.component';
-import { UserListComponent } from './components/user-list/user-list.component';
-export const routes: Routes = [
-    {
-        path: '', redirectTo: '/login',pathMatch:'full'
-    },
-    {
-        path: 'login', component:LoginComponent
-    },
-    {
-        path: 'user-list', component:UserListComponent
-    },
-];
-
-```
 
 ### Resultado de la ejecución 
 #### Login
